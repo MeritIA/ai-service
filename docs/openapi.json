@@ -1,0 +1,375 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/salud": {
+      "get": {
+        "description": "Publica y sin llamar al proveedor de modelo: un chequeo que gastara cuota del proveedor en cada sondeo seria un coste y una via de abuso.",
+        "operationId": "SaludController_salud",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "estado": "ok"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Comprobacion de vida",
+        "tags": [
+          "salud"
+        ]
+      }
+    },
+    "/api/v1/evaluaciones": {
+      "post": {
+        "description": "Sincrono: responde cuando el modelo termina. La asincronia la pone la cola del backend (paquete 4.1), que es quien reintenta segun el campo `reintentable` de los errores.",
+        "operationId": "EvaluacionesController_evaluar_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudDeEvaluacionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDeEvaluacionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Peticion o rubrica invalidas. No reintentable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta la clave de acceso o no es valida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera 2 MB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El proveedor rechazo la solicitud (clave, modelo o contenido bloqueado). No reintentable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "La respuesta del modelo no cumple el contrato. Reintentable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Proveedor caido, sobrecargado o sin responder a tiempo. Reintentable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "clave-de-acceso": []
+          }
+        ],
+        "summary": "Evalua una entrega contra su rubrica",
+        "tags": [
+          "evaluaciones"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "MeritIA - Servicio de evaluacion con IA",
+    "description": "Contrato entre el modulo de evaluacion del backend y el servicio de IA (paquete 4.4 de la EDT). Solo el backend lo invoca, con la clave de acceso compartida.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "clave-de-acceso": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "CLAVE_DE_ACCESO compartida con el backend."
+      }
+    },
+    "schemas": {
+      "CriterioDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 120,
+            "example": "Correccion funcional"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Que significa cada nivel de la escala."
+          },
+          "peso": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100,
+            "description": "Los pesos de la rubrica suman 100."
+          },
+          "escalaMaxima": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000,
+            "example": 5
+          }
+        },
+        "required": [
+          "nombre",
+          "descripcion",
+          "peso",
+          "escalaMaxima"
+        ]
+      },
+      "ArchivoDto": {
+        "type": "object",
+        "properties": {
+          "ruta": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "src/main.py"
+          },
+          "contenido": {
+            "type": "string",
+            "maxLength": 500000,
+            "description": "Contenido del archivo como texto."
+          }
+        },
+        "required": [
+          "ruta",
+          "contenido"
+        ]
+      },
+      "SolicitudDeEvaluacionDto": {
+        "type": "object",
+        "properties": {
+          "idEvaluacion": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Lo asigna el backend; se devuelve tal cual para correlacionar."
+          },
+          "enunciado": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "criterios": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CriterioDto"
+            }
+          },
+          "archivos": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArchivoDto"
+            }
+          }
+        },
+        "required": [
+          "idEvaluacion",
+          "enunciado",
+          "criterios",
+          "archivos"
+        ]
+      },
+      "CalificacionDto": {
+        "type": "object",
+        "properties": {
+          "criterio": {
+            "type": "string"
+          },
+          "puntaje": {
+            "type": "number"
+          },
+          "escalaMaxima": {
+            "type": "number"
+          },
+          "peso": {
+            "type": "number"
+          },
+          "evidencia": {
+            "type": "string",
+            "description": "Por que ese puntaje, con referencia a la entrega."
+          }
+        },
+        "required": [
+          "criterio",
+          "puntaje",
+          "escalaMaxima",
+          "peso",
+          "evidencia"
+        ]
+      },
+      "ResultadoDeEvaluacionDto": {
+        "type": "object",
+        "properties": {
+          "idEvaluacion": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "notaFinal": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Suma ponderada, dos decimales."
+          },
+          "criterios": {
+            "description": "En el orden de la rubrica.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalificacionDto"
+            }
+          },
+          "proveedor": {
+            "type": "string",
+            "example": "gemini"
+          },
+          "modelo": {
+            "type": "string",
+            "example": "gemini-2.5-flash"
+          }
+        },
+        "required": [
+          "idEvaluacion",
+          "notaFinal",
+          "criterios",
+          "proveedor",
+          "modelo"
+        ]
+      },
+      "DetalleValidacionDto": {
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string"
+          },
+          "problemas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "campo",
+          "problemas"
+        ]
+      },
+      "ErrorDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "number"
+          },
+          "codigo": {
+            "type": "string",
+            "enum": [
+              "VALIDACION",
+              "JSON_MAL_FORMADO",
+              "CUERPO_DEMASIADO_GRANDE",
+              "NO_AUTENTICADO",
+              "NO_ENCONTRADO",
+              "RUBRICA_INVALIDA",
+              "PROVEEDOR_NO_DISPONIBLE",
+              "SALIDA_INVALIDA",
+              "SOLICITUD_RECHAZADA_POR_PROVEEDOR",
+              "PETICION_INVALIDA",
+              "INTERNO"
+            ]
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "reintentable": {
+            "type": "boolean",
+            "description": "Si tiene sentido volver a intentarlo."
+          },
+          "momento": {
+            "type": "string"
+          },
+          "ruta": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetalleValidacionDto"
+            }
+          }
+        },
+        "required": [
+          "estado",
+          "codigo",
+          "mensaje",
+          "reintentable",
+          "momento",
+          "ruta",
+          "referencia"
+        ]
+      }
+    }
+  }
+}

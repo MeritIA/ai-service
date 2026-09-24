@@ -1,0 +1,35 @@
+# Servicio de IA de MeritIA, desplegado aparte del monolito (paquete 4.4).
+#
+# Es otro proyecto de compose, y por tanto otra red: desde aqui no se alcanza
+# ni la base de datos, ni Redis, ni MinIO del backend. Si alguien compromete
+# este contenedor a traves de una entrega maliciosa, no encuentra nada al lado.
+
+name: meritia-ai
+
+services:
+  ai-service:
+    build:
+      context: .
+      target: runtime
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - '${HOST_PORT:-13100}:3000'
+    # Endurecimiento: sistema de ficheros de solo lectura, sin capacidades del
+    # kernel y sin escalada de privilegios. El servicio solo necesita leer su
+    # codigo y hablar por red con el proveedor de modelo.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Un pico de evaluaciones no debe tumbar la maquina que comparta.
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    restart: unless-stopped
