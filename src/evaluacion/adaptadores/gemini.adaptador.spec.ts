@@ -35,11 +35,11 @@ describe('adaptador de Gemini', () => {
     const { cliente, generateContent } = clienteQueDevuelve({ text: '{"criterios":[]}' });
     const s = solicitud();
 
-    const texto = await new ProveedorGemini(cliente, 'gemini-2.5-flash').generarJson(s);
+    const texto = await new ProveedorGemini(cliente, 'gemini-3.5-flash').generarJson(s);
 
     expect(texto).toBe('{"criterios":[]}');
     expect(generateContent).toHaveBeenCalledWith({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: s.contenido,
       config: {
         systemInstruction: s.instruccionDeSistema,

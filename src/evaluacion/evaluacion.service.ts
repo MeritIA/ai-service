@@ -80,6 +80,10 @@ export class EvaluacionService {
         idEvaluacion: solicitud.idEvaluacion,
         proveedor: this.proveedor.nombre,
         tipo: e instanceof Error ? e.name : 'desconocido',
+        // El mensaje de los errores del dominio: lleva el codigo HTTP del
+        // proveedor y nunca su texto, que podria traer datos de la cuenta.
+        // Sin esto, un rechazo del proveedor no se podia diagnosticar.
+        detalle: e instanceof Error ? e.message : String(e),
         ...(e instanceof SalidaInvalidaError ? { motivo: e.motivo } : {}),
         duracionMs: Date.now() - inicio,
       });

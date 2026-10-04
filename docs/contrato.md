@@ -48,7 +48,7 @@ Respuesta `200`:
     { "criterio": "Claridad", "puntaje": 5, "escalaMaxima": 10, "peso": 40, "evidencia": "..." }
   ],
   "proveedor": "gemini",
-  "modelo": "gemini-2.5-flash"
+  "modelo": "gemini-3.5-flash"
 }
 ```
 

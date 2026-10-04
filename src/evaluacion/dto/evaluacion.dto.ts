@@ -97,7 +97,7 @@ export class ResultadoDeEvaluacionDto {
   @ApiProperty({ type: [CalificacionDto], description: 'En el orden de la rubrica.' })
   criterios!: CalificacionDto[];
   @ApiProperty({ example: 'gemini' }) proveedor!: string;
-  @ApiProperty({ example: 'gemini-2.5-flash' }) modelo!: string;
+  @ApiProperty({ example: 'gemini-3.5-flash' }) modelo!: string;
 }
 
 export class DetalleValidacionDto {
