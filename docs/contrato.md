@@ -94,6 +94,51 @@ En el backend, un error no reintentable corresponde a
 Las capas de detección sobre la entrada (lista negra, puntaje de riesgo) y el
 registro forense de cada evaluación son del **paquete 4.2**.
 
+## Detección de inyección (paquete 4.2)
+
+Antes de armar el prompt, la entrega pasa por las capas 1 y 2 del Plan de
+Seguridad §6.1. La capa 3 (contexto aislado, instrucción de defensa y
+validación del JSON) ya estaba desde el 4.4.
+
+**No bloquea: marca.** El riesgo que señala la ficha del propio paquete son los
+falsos positivos —una entrega legítima cuyo ejercicio trata justamente de
+prompts—, así que el resultado es un puntaje graduado con banderas y la entrega
+se evalúa igual. Bloquear en automático convertiría un falso positivo en un
+candidato descartado sin que nadie lo revise.
+
+| Qué se detecta | Peso |
+|---|---|
+| Frases de evasión («ignora las instrucciones anteriores», «ignore previous») | 40 |
+| Pedir la nota directamente («pon la nota máxima», «give full marks») | 35 |
+| Cambio de rol («a partir de ahora eres», «you are now») | 30 |
+| Texto oculto: caracteres invisibles o de control | 30 |
+| Mención del sistema («system prompt», «override», «bypass») | 25 |
+| Intento de cerrar el delimitador de la entrega | 20 |
+| Exigencia de formato («output only», «no menciones») | 15 |
+| Línea desmesurada (más de 5000 caracteres) | 10 |
+
+Cada código cuenta **una sola vez** por mucho que se repita: diez copias de la
+misma frase no son diez ataques, y contarlas así dispararía el puntaje de un
+fichero que repite una línea. El riesgo sale del puntaje: 0 ninguno, 1 a 29
+bajo, 30 a 59 medio, 60 o más alto.
+
+**Dos evasiones cerradas:** el texto se normaliza (NFKC) antes de comparar, así
+que las variantes tipográficas no sirven; y se eliminan los caracteres
+invisibles, así que `ig<zero-width>nora` tampoco.
+
+**Qué viaja en la respuesta** (campo `seguridad`): riesgo, puntaje, banderas con
+su archivo y número de ocurrencias, y las **versiones** de las reglas y de la
+lista negra. Nunca el texto del candidato: si logró manipular al modelo, ese
+texto es justo lo que no debe acabar copiado en un log o en una base de datos.
+
+**Con indicios, el modelo recibe un aviso de texto fijo** pidiéndole que aplique
+la rúbrica igual y lo mencione en la evidencia. Fijo a propósito: repetirle lo
+que escribió el candidato sería darle el ataque por segunda vez.
+
+**La lista negra está versionada** (`lista-negra.ts`). Se amplía añadiendo el
+término y subiendo la versión; nunca se reescribe, porque las evaluaciones
+viejas siguieron otras reglas.
+
 ## Aislamiento
 
 - **Sin credenciales ajenas.** No tiene acceso a la base de datos, a Redis, al

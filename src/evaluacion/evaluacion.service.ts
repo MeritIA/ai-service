@@ -15,6 +15,7 @@ import {
   type SolicitudAlModelo,
 } from './dominio/proveedor-de-modelo.js';
 import { validarRubrica } from './dominio/rubrica.js';
+import { analizarEntrega } from './dominio/deteccion-de-inyeccion.js';
 import { SalidaInvalidaError, validarRespuesta } from './dominio/validar-respuesta.js';
 
 export const TIEMPO_MAXIMO_POR_OMISION_MS = 90_000;
@@ -27,9 +28,11 @@ export const TIEMPO_MAXIMO_POR_OMISION_MS = 90_000;
  * valida la salida sin confiar en que el proveedor lo respeto. La nota final la
  * calcula este codigo, no el modelo.
  *
- * Las capas de deteccion de inyeccion sobre la entrada (lista negra, puntaje de
- * riesgo) y el registro forense son del paquete 4.2 y se anaden antes de la
- * llamada al proveedor.
+ * Antes de armar el prompt, la entrega pasa por la deteccion del paquete 4.2:
+ * se quitan los caracteres invisibles y se marca lo que parezca un intento de
+ * manipulacion. **No se bloquea**: se evalua igual y la marca viaja en el
+ * resultado, porque un falso positivo no puede descartar a un candidato sin
+ * que nadie lo revise.
  */
 @Injectable()
 export class EvaluacionService {
@@ -49,10 +52,26 @@ export class EvaluacionService {
     try {
       validarRubrica(solicitud.criterios);
 
-      const delimitador = delimitadorPara(solicitud);
+      // Capas 1 y 2 del Plan de Seguridad §6.1, antes de que el contenido
+      // llegue al modelo. Lo que sigue usa los archivos ya saneados.
+      const { archivos, analisis } = analizarEntrega(solicitud.archivos);
+      const saneada = { ...solicitud, archivos };
+      if (analisis.riesgo !== 'ninguno') {
+        this.registrar('warn', 'indicios_de_inyeccion', {
+          idEvaluacion: solicitud.idEvaluacion,
+          riesgo: analisis.riesgo,
+          puntaje: analisis.puntaje,
+          banderas: analisis.banderas,
+          versionReglas: analisis.versionReglas,
+          versionListaNegra: analisis.versionListaNegra,
+        });
+      }
+
+      const delimitador = delimitadorPara(saneada);
+      const avisar = analisis.riesgo === 'medio' || analisis.riesgo === 'alto';
       const texto = await this.llamarConLimite({
-        instruccionDeSistema: instruccionDeSistema(delimitador),
-        contenido: contenidoParaElModelo(solicitud, delimitador),
+        instruccionDeSistema: instruccionDeSistema(delimitador, avisar),
+        contenido: contenidoParaElModelo(saneada, delimitador),
         esquemaDeRespuesta: esquemaDeRespuesta(solicitud.criterios),
       });
 
@@ -63,6 +82,7 @@ export class EvaluacionService {
         criterios,
         proveedor: this.proveedor.nombre,
         modelo: this.proveedor.modelo,
+        seguridad: analisis,
       };
 
       this.registrar('log', 'evaluacion_completada', {
@@ -71,6 +91,7 @@ export class EvaluacionService {
         modelo: this.proveedor.modelo,
         criterios: criterios.length,
         archivos: solicitud.archivos.length,
+        riesgoDeInyeccion: analisis.riesgo,
         duracionMs: Date.now() - inicio,
       });
       return resultado;

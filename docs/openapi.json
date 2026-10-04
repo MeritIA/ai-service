@@ -259,6 +259,67 @@
           "evidencia"
         ]
       },
+      "BanderaDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "evasion_de_instrucciones"
+          },
+          "archivo": {
+            "type": "string",
+            "description": "Archivo donde aparecio."
+          },
+          "ocurrencias": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "codigo",
+          "archivo",
+          "ocurrencias"
+        ]
+      },
+      "SeguridadDto": {
+        "type": "object",
+        "properties": {
+          "riesgo": {
+            "type": "string",
+            "enum": [
+              "ninguno",
+              "bajo",
+              "medio",
+              "alto"
+            ]
+          },
+          "puntaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "banderas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BanderaDto"
+            }
+          },
+          "versionReglas": {
+            "type": "string",
+            "example": "2026-10-04"
+          },
+          "versionListaNegra": {
+            "type": "string",
+            "example": "2026-10-04"
+          }
+        },
+        "required": [
+          "riesgo",
+          "puntaje",
+          "banderas",
+          "versionReglas",
+          "versionListaNegra"
+        ]
+      },
       "ResultadoDeEvaluacionDto": {
         "type": "object",
         "properties": {
@@ -286,6 +347,9 @@
           "modelo": {
             "type": "string",
             "example": "gemini-3.5-flash"
+          },
+          "seguridad": {
+            "$ref": "#/components/schemas/SeguridadDto"
           }
         },
         "required": [
@@ -293,7 +357,8 @@
           "notaFinal",
           "criterios",
           "proveedor",
-          "modelo"
+          "modelo",
+          "seguridad"
         ]
       },
       "DetalleValidacionDto": {

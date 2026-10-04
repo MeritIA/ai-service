@@ -1,3 +1,5 @@
+import type { AnalisisDeSeguridad } from './deteccion-de-inyeccion.js';
+
 /**
  * Contrato del servicio de IA: lo que recibe y lo que devuelve.
  *
@@ -41,6 +43,14 @@ export interface CalificacionDeCriterio {
 }
 
 export interface ResultadoDeEvaluacion {
+  /**
+   * Analisis anti inyeccion de la entrega (paquete 4.2).
+   *
+   * Viaja con el resultado para que el backend lo persista: una nota se
+   * puede disputar meses despues, y entonces hay que poder decir con que
+   * reglas se marco la entrega.
+   */
+  readonly seguridad: AnalisisDeSeguridad;
   readonly idEvaluacion: string;
   /** Suma ponderada de los criterios, de 0 a 100, con dos decimales. */
   readonly notaFinal: number;
