@@ -16,6 +16,7 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
+    "test:calibracion": "vitest run --config ./vitest.config.calibracion.ts",
     "openapi:export": "npm run build && node scripts/exportar-openapi.mjs",
     "openapi:check": "npm run build && node scripts/exportar-openapi.mjs --check"
   },

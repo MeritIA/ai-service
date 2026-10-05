@@ -139,6 +139,69 @@ que escribió el candidato sería darle el ataque por segunda vez.
 término y subiendo la versión; nunca se reescribe, porque las evaluaciones
 viejas siguieron otras reglas.
 
+## Calibración de la calificación (paquete 4.3)
+
+El Diccionario de la EDT pide, como tercer entregable del paquete, un "conjunto
+de pruebas con entregas de referencia". Son cinco entregas contra una misma
+rúbrica, cada una elegida para aislar una cosa distinta, en
+`test/calibracion/entregas-de-referencia.ts`.
+
+```
+CALIBRACION=1 npm run test:calibracion
+```
+
+**No corre con el resto de la suite ni en la integración continua**, y eso es
+deliberado: gasta cuota del proveedor y su resultado no es determinista. Sin
+`CALIBRACION=1` y sin `GEMINI_API_KEY` se salta entera.
+
+### Qué se afirma, y qué no
+
+No se exige un número exacto: un modelo de lenguaje no es determinista y una
+prueba que pida 82 falla el martes. Se exige:
+
+1. **Los invariantes del contrato sobre una respuesta real**, no simulada: la
+   nota es la suma ponderada —recalculada en la prueba, sin usar la función del
+   servicio—, cada criterio trae evidencia, y los criterios son exactamente los
+   de la rúbrica, en su orden.
+2. **Bandas amplias**: lo que resuelve el ejercicio no puede sacar 20, y lo que
+   no viene al caso no puede sacar 80.
+3. **El orden entre entregas**, que es lo que de verdad usa un reclutador.
+4. **Que el desglose discrimine**. Si el modelo pusiera la misma nota a todos
+   los criterios, la rúbrica sería un adorno.
+
+**Si una banda falla, la primera pregunta es si la banda está mal.** Son un
+juicio del equipo sobre estas cinco entregas, no una verdad medida.
+
+### Última corrida
+
+Con `gemini/gemini-3.5-flash`, el 2026-10-05:
+
+| Entrega | Nota | Corrección (70) | Claridad (30) |
+|---|---|---|---|
+| `correcta` | 100 | 5/5 | 5/5 |
+| `correcta_ilegible` | 75 | 4,5/5 | 2/5 |
+| `mutante` | 44 | 1/5 | 5/5 |
+| `falla_en_vacia` | 40 | 2/5 | 2/5 |
+| `irrelevante` | 0 | 0/5 | 0/5 |
+
+Las dos filas que demuestran que la rúbrica funciona:
+
+- **`mutante`** invierte la lista pero modifica la original, que es lo único que
+  el enunciado prohíbe. Saca **1/5 en corrección y 5/5 en claridad**: el código
+  está limpio y el modelo lo dice, pero no cumple el enunciado y el modelo
+  también lo dice. Un número solo —44— escondería las dos cosas.
+- **`correcta_ilegible`** funciona perfecto y está escrita de forma ilegible:
+  4,5 contra 2. El desglose separa "no sirve" de "sirve pero no se entiende",
+  que son dos conversaciones distintas con el candidato.
+
+### Cuando el proveedor dice "ahora no"
+
+Gemini devuelve 503 con el modelo saturado y 429 al pasarse de cuota. La suite
+reintenta tres veces con espera creciente y, si sigue, **falla diciendo que es
+del proveedor y no de la calificación**. Sin esa distinción, una saturación de
+dos minutos se lee como "la calibración falló", y una suite que se malinterpreta
+así deja de mirarse.
+
 ## Aislamiento
 
 - **Sin credenciales ajenas.** No tiene acceso a la base de datos, a Redis, al
