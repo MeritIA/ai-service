@@ -122,6 +122,14 @@ describe('e2e: servicio de evaluacion', () => {
         ],
         proveedor: 'falso',
         modelo: 'falso-1',
+        // Desde el paquete 4.2 el resultado lleva el analisis anti inyeccion.
+        seguridad: {
+          riesgo: 'ninguno',
+          puntaje: 0,
+          banderas: [],
+          versionReglas: expect.any(String),
+          versionListaNegra: expect.any(String),
+        },
       });
     });
 

@@ -48,7 +48,7 @@ Respuesta `200`:
     { "criterio": "Claridad", "puntaje": 5, "escalaMaxima": 10, "peso": 40, "evidencia": "..." }
   ],
   "proveedor": "gemini",
-  "modelo": "gemini-2.5-flash"
+  "modelo": "gemini-3.5-flash"
 }
 ```
 
@@ -93,6 +93,114 @@ En el backend, un error no reintentable corresponde a
 
 Las capas de detección sobre la entrada (lista negra, puntaje de riesgo) y el
 registro forense de cada evaluación son del **paquete 4.2**.
+
+## Detección de inyección (paquete 4.2)
+
+Antes de armar el prompt, la entrega pasa por las capas 1 y 2 del Plan de
+Seguridad §6.1. La capa 3 (contexto aislado, instrucción de defensa y
+validación del JSON) ya estaba desde el 4.4.
+
+**No bloquea: marca.** El riesgo que señala la ficha del propio paquete son los
+falsos positivos —una entrega legítima cuyo ejercicio trata justamente de
+prompts—, así que el resultado es un puntaje graduado con banderas y la entrega
+se evalúa igual. Bloquear en automático convertiría un falso positivo en un
+candidato descartado sin que nadie lo revise.
+
+| Qué se detecta | Peso |
+|---|---|
+| Frases de evasión («ignora las instrucciones anteriores», «ignore previous») | 40 |
+| Pedir la nota directamente («pon la nota máxima», «give full marks») | 35 |
+| Cambio de rol («a partir de ahora eres», «you are now») | 30 |
+| Texto oculto: caracteres invisibles o de control | 30 |
+| Mención del sistema («system prompt», «override», «bypass») | 25 |
+| Intento de cerrar el delimitador de la entrega | 20 |
+| Exigencia de formato («output only», «no menciones») | 15 |
+| Línea desmesurada (más de 5000 caracteres) | 10 |
+
+Cada código cuenta **una sola vez** por mucho que se repita: diez copias de la
+misma frase no son diez ataques, y contarlas así dispararía el puntaje de un
+fichero que repite una línea. El riesgo sale del puntaje: 0 ninguno, 1 a 29
+bajo, 30 a 59 medio, 60 o más alto.
+
+**Dos evasiones cerradas:** el texto se normaliza (NFKC) antes de comparar, así
+que las variantes tipográficas no sirven; y se eliminan los caracteres
+invisibles, así que `ig<zero-width>nora` tampoco.
+
+**Qué viaja en la respuesta** (campo `seguridad`): riesgo, puntaje, banderas con
+su archivo y número de ocurrencias, y las **versiones** de las reglas y de la
+lista negra. Nunca el texto del candidato: si logró manipular al modelo, ese
+texto es justo lo que no debe acabar copiado en un log o en una base de datos.
+
+**Con indicios, el modelo recibe un aviso de texto fijo** pidiéndole que aplique
+la rúbrica igual y lo mencione en la evidencia. Fijo a propósito: repetirle lo
+que escribió el candidato sería darle el ataque por segunda vez.
+
+**La lista negra está versionada** (`lista-negra.ts`). Se amplía añadiendo el
+término y subiendo la versión; nunca se reescribe, porque las evaluaciones
+viejas siguieron otras reglas.
+
+## Calibración de la calificación (paquete 4.3)
+
+El Diccionario de la EDT pide, como tercer entregable del paquete, un "conjunto
+de pruebas con entregas de referencia". Son cinco entregas contra una misma
+rúbrica, cada una elegida para aislar una cosa distinta, en
+`test/calibracion/entregas-de-referencia.ts`.
+
+```
+CALIBRACION=1 npm run test:calibracion
+```
+
+**No corre con el resto de la suite ni en la integración continua**, y eso es
+deliberado: gasta cuota del proveedor y su resultado no es determinista. Sin
+`CALIBRACION=1` y sin `GEMINI_API_KEY` se salta entera.
+
+### Qué se afirma, y qué no
+
+No se exige un número exacto: un modelo de lenguaje no es determinista y una
+prueba que pida 82 falla el martes. Se exige:
+
+1. **Los invariantes del contrato sobre una respuesta real**, no simulada: la
+   nota es la suma ponderada —recalculada en la prueba, sin usar la función del
+   servicio—, cada criterio trae evidencia, y los criterios son exactamente los
+   de la rúbrica, en su orden.
+2. **Bandas amplias**: lo que resuelve el ejercicio no puede sacar 20, y lo que
+   no viene al caso no puede sacar 80.
+3. **El orden entre entregas**, que es lo que de verdad usa un reclutador.
+4. **Que el desglose discrimine**. Si el modelo pusiera la misma nota a todos
+   los criterios, la rúbrica sería un adorno.
+
+**Si una banda falla, la primera pregunta es si la banda está mal.** Son un
+juicio del equipo sobre estas cinco entregas, no una verdad medida.
+
+### Última corrida
+
+Con `gemini/gemini-3.5-flash`, el 2026-10-05:
+
+| Entrega | Nota | Corrección (70) | Claridad (30) |
+|---|---|---|---|
+| `correcta` | 100 | 5/5 | 5/5 |
+| `correcta_ilegible` | 75 | 4,5/5 | 2/5 |
+| `mutante` | 44 | 1/5 | 5/5 |
+| `falla_en_vacia` | 40 | 2/5 | 2/5 |
+| `irrelevante` | 0 | 0/5 | 0/5 |
+
+Las dos filas que demuestran que la rúbrica funciona:
+
+- **`mutante`** invierte la lista pero modifica la original, que es lo único que
+  el enunciado prohíbe. Saca **1/5 en corrección y 5/5 en claridad**: el código
+  está limpio y el modelo lo dice, pero no cumple el enunciado y el modelo
+  también lo dice. Un número solo —44— escondería las dos cosas.
+- **`correcta_ilegible`** funciona perfecto y está escrita de forma ilegible:
+  4,5 contra 2. El desglose separa "no sirve" de "sirve pero no se entiende",
+  que son dos conversaciones distintas con el candidato.
+
+### Cuando el proveedor dice "ahora no"
+
+Gemini devuelve 503 con el modelo saturado y 429 al pasarse de cuota. La suite
+reintenta tres veces con espera creciente y, si sigue, **falla diciendo que es
+del proveedor y no de la calificación**. Sin esa distinción, una saturación de
+dos minutos se lee como "la calibración falló", y una suite que se malinterpreta
+así deja de mirarse.
 
 ## Aislamiento
 

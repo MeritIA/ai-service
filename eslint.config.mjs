@@ -26,6 +26,26 @@ export default tseslint.config(
     },
   },
   {
+    // ---------------------------------------------------------------------
+    // Excepcion acotada, con motivo: la deteccion anti inyeccion del paquete
+    // 4.2 existe PARA tratar caracteres invisibles y de control. Son
+    // exactamente lo que un atacante usa para esconder instrucciones, asi que
+    // aqui no son un descuido de tecleo sino el objeto del codigo.
+    //
+    // No alcanza al resto del proyecto: fuera de estos archivos siguen siendo
+    // un error.
+    // ---------------------------------------------------------------------
+    files: [
+      'src/evaluacion/dominio/deteccion-de-inyeccion.ts',
+      'src/evaluacion/dominio/deteccion-de-inyeccion.spec.ts',
+      'test/seguridad-inyeccion.e2e-spec.ts',
+    ],
+    rules: {
+      'no-irregular-whitespace': 'off',
+      'no-control-regex': 'off',
+    },
+  },
+  {
     // supertest declara `response.body` como `any`: excepcion acotada a pruebas.
     files: ['test/**/*.ts'],
     rules: {

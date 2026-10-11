@@ -90,6 +90,26 @@ export class CalificacionDto {
   evidencia!: string;
 }
 
+export class BanderaDto {
+  @ApiProperty({ example: 'evasion_de_instrucciones' }) codigo!: string;
+  @ApiProperty({ description: 'Archivo donde aparecio.' }) archivo!: string;
+  @ApiProperty() ocurrencias!: number;
+}
+
+/**
+ * Analisis anti inyeccion (paquete 4.2).
+ *
+ * No bloquea nada: el servicio evalua igual y el backend guarda esto para que
+ * el reclutador lo vea. Un falso positivo no puede descartar a un candidato.
+ */
+export class SeguridadDto {
+  @ApiProperty({ enum: ['ninguno', 'bajo', 'medio', 'alto'] }) riesgo!: string;
+  @ApiProperty({ minimum: 0, maximum: 100 }) puntaje!: number;
+  @ApiProperty({ type: [BanderaDto] }) banderas!: BanderaDto[];
+  @ApiProperty({ example: '2026-10-04' }) versionReglas!: string;
+  @ApiProperty({ example: '2026-10-04' }) versionListaNegra!: string;
+}
+
 export class ResultadoDeEvaluacionDto {
   @ApiProperty({ format: 'uuid' }) idEvaluacion!: string;
   @ApiProperty({ minimum: 0, maximum: 100, description: 'Suma ponderada, dos decimales.' })
@@ -97,7 +117,8 @@ export class ResultadoDeEvaluacionDto {
   @ApiProperty({ type: [CalificacionDto], description: 'En el orden de la rubrica.' })
   criterios!: CalificacionDto[];
   @ApiProperty({ example: 'gemini' }) proveedor!: string;
-  @ApiProperty({ example: 'gemini-2.5-flash' }) modelo!: string;
+  @ApiProperty({ example: 'gemini-3.5-flash' }) modelo!: string;
+  @ApiProperty({ type: SeguridadDto }) seguridad!: SeguridadDto;
 }
 
 export class DetalleValidacionDto {
