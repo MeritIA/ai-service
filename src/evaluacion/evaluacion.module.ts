@@ -11,5 +11,6 @@ import { crearProveedor } from './adaptadores/crear-proveedor.js';
     EvaluacionService,
     { provide: PROVEEDOR_DE_MODELO, inject: [ConfigService], useFactory: crearProveedor },
   ],
+  exports: [PROVEEDOR_DE_MODELO],
 })
 export class EvaluacionModule {}

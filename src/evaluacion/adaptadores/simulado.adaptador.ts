@@ -13,8 +13,22 @@ export class ProveedorSimulado implements ProveedorDeModelo {
 
   generarJson(solicitud: SolicitudAlModelo): Promise<string> {
     const esquema = solicitud.esquemaDeRespuesta as {
-      properties?: { criterios?: { items?: { properties?: { criterio?: { enum?: unknown } } } } };
+      properties?: {
+        respuesta?: unknown;
+        criterios?: { items?: { properties?: { criterio?: { enum?: unknown } } } };
+      };
     };
+    // El mentor pide {respuesta, sugerencias}: se contesta con un texto que dice
+    // lo que es, por la misma razon que la nota 0 de arriba.
+    if (esquema.properties?.respuesta !== undefined) {
+      return Promise.resolve(
+        JSON.stringify({
+          respuesta:
+            'Mentor simulado: ningun modelo leyo tu historial. Configura PROVEEDOR_IA=gemini.',
+          sugerencias: [],
+        }),
+      );
+    }
     const enumeracion = esquema.properties?.criterios?.items?.properties?.criterio?.enum;
     const nombres = Array.isArray(enumeracion)
       ? enumeracion.filter((n): n is string => typeof n === 'string')

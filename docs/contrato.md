@@ -230,6 +230,32 @@ así deja de mirarse.
 
 El dominio, el controlador y el backend no cambian.
 
+## Mentor (`POST /api/v1/mentor`)
+
+Conversación con el candidato sobre sus propias evaluaciones. **Sin estado**: no
+guarda conversaciones ni conoce la base del backend. Cada llamada trae:
+
+- `contexto`: resumen compacto que arma el backend (total y promedio, promedio
+  por criterio y las 3 evaluaciones más recientes con su criterio más flojo y la
+  evidencia recortada). Sin entregas, enunciados, rúbricas completas ni nombres.
+- `historial`: la conversación previa; el servicio se queda con los **últimos 6
+  turnos** y recorta cada uno a 400 caracteres.
+- `pregunta`: hasta 500 caracteres.
+
+Respuesta: `{ respuesta, sugerencias[≤3], proveedor, modelo }`.
+
+**Cómo gasta pocos tokens**
+
+1. El contexto viaja como texto plano de unas pocas líneas, no como JSON.
+2. La instrucción fija va primero, para que el proveedor pueda reutilizar su prefijo.
+3. El historial está acotado en turnos y en longitud, así que una conversación
+   larga no encarece cada pregunta.
+4. La salida tiene tope duro (`maxTokensDeSalida`: 400) y se pide en menos de 120 palabras.
+5. La pregunta va entre un delimitador aleatorio y se trata como dato.
+
+Errores: los mismos que la evaluación (`503` reintentable si el proveedor cae,
+`502` si la salida no cumple el formato).
+
 ## Configuración
 
 Ver [`.env.example`](../.env.example). `PROVEEDOR_IA=simulado` permite

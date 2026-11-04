@@ -58,7 +58,8 @@ export class ProveedorGemini implements ProveedorDeModelo {
           responseJsonSchema: solicitud.esquemaDeRespuesta,
           // Temperatura 0: dos candidatos con la misma entrega deben sacar la
           // misma nota. Es la promesa del producto.
-          temperature: 0,
+          temperature: solicitud.temperatura ?? 0,
+          ...(solicitud.maxTokensDeSalida ? { maxOutputTokens: solicitud.maxTokensDeSalida } : {}),
           abortSignal: solicitud.senal,
         },
       });

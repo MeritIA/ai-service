@@ -123,6 +123,54 @@
           "evaluaciones"
         ]
       }
+    },
+    "/api/v1/mentor": {
+      "post": {
+        "description": "Sin estado: el backend manda un resumen compacto, los ultimos turnos y la pregunta. Ver docs/contrato.md.",
+        "operationId": "MentorController_responder_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudDeMentorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaDeMentorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Proveedor no disponible. Reintentable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "clave-de-acceso": []
+          }
+        ],
+        "summary": "Responde una pregunta del candidato usando el resumen de su historial",
+        "tags": [
+          "mentor"
+        ]
+      }
     }
   },
   "info": {
@@ -433,6 +481,170 @@
           "momento",
           "ruta",
           "referencia"
+        ]
+      },
+      "CriterioDelPerfilDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "veces": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "nombre",
+          "porcentaje",
+          "veces"
+        ]
+      },
+      "FlojoDto": {
+        "type": "object",
+        "properties": {
+          "criterio": {
+            "type": "string"
+          },
+          "porcentaje": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "evidencia": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "criterio",
+          "porcentaje",
+          "evidencia"
+        ]
+      },
+      "EvaluacionRecienteDto": {
+        "type": "object",
+        "properties": {
+          "reto": {
+            "type": "string"
+          },
+          "nota": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "flojo": {
+            "$ref": "#/components/schemas/FlojoDto"
+          }
+        },
+        "required": [
+          "reto",
+          "nota"
+        ]
+      },
+      "ContextoDto": {
+        "type": "object",
+        "properties": {
+          "totalEvaluaciones": {
+            "type": "number"
+          },
+          "promedio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "perfil": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CriterioDelPerfilDto"
+            }
+          },
+          "recientes": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluacionRecienteDto"
+            }
+          }
+        },
+        "required": [
+          "totalEvaluaciones",
+          "promedio",
+          "perfil",
+          "recientes"
+        ]
+      },
+      "TurnoDto": {
+        "type": "object",
+        "properties": {
+          "rol": {
+            "type": "string",
+            "enum": [
+              "candidato",
+              "mentor"
+            ]
+          },
+          "texto": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rol",
+          "texto"
+        ]
+      },
+      "SolicitudDeMentorDto": {
+        "type": "object",
+        "properties": {
+          "contexto": {
+            "$ref": "#/components/schemas/ContextoDto"
+          },
+          "historial": {
+            "description": "Conversacion previa. El servicio se queda con los ultimos turnos y los recorta.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TurnoDto"
+            }
+          },
+          "pregunta": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "contexto",
+          "historial",
+          "pregunta"
+        ]
+      },
+      "RespuestaDeMentorDto": {
+        "type": "object",
+        "properties": {
+          "respuesta": {
+            "type": "string"
+          },
+          "sugerencias": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "proveedor": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "respuesta",
+          "sugerencias",
+          "proveedor",
+          "modelo"
         ]
       }
     }

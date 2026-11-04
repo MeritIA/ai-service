@@ -13,6 +13,10 @@ export interface SolicitudAlModelo {
   readonly instruccionDeSistema: string;
   readonly contenido: string;
   readonly esquemaDeRespuesta: EsquemaJson;
+  /** Tope de tokens de salida. Omitido: el del proveedor. El mentor lo usa para gastar poco. */
+  readonly maxTokensDeSalida?: number;
+  /** Omitida: 0, que es lo que exige calificar. El mentor conversa y admite algo de variacion. */
+  readonly temperatura?: number;
   /** Se aborta al agotarse el tiempo: el adaptador debe cancelar la llamada de red. */
   readonly senal: AbortSignal;
 }
